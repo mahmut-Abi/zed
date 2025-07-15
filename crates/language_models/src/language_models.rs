@@ -13,6 +13,7 @@ use crate::provider::anthropic::AnthropicLanguageModelProvider;
 use crate::provider::bedrock::BedrockLanguageModelProvider;
 use crate::provider::cloud::CloudLanguageModelProvider;
 use crate::provider::copilot_chat::CopilotChatLanguageModelProvider;
+use crate::provider::custom_model::CustomModelLanguageModelProvider;
 use crate::provider::google::GoogleLanguageModelProvider;
 use crate::provider::lmstudio::LmStudioLanguageModelProvider;
 use crate::provider::mistral::MistralLanguageModelProvider;
@@ -47,6 +48,10 @@ fn register_language_model_providers(
     );
     registry.register_provider(
         OpenAiLanguageModelProvider::new(client.http_client(), cx),
+        cx,
+    );
+    registry.register_provider(
+        CohereLanguageModelProvider::new(client.http_client(), cx),
         cx,
     );
     registry.register_provider(
