@@ -37,7 +37,7 @@ members = [
     "crates/context_server",
     "crates/copilot",
     "crates/credentials_provider",
-    "creates/custom_model",
+    "crates/custom_model",
     "crates/dap",
     "crates/dap_adapters",
     "crates/db",
@@ -256,6 +256,7 @@ component = { path = "crates/component" }
 context_server = { path = "crates/context_server" }
 copilot = { path = "crates/copilot" }
 credentials_provider = { path = "crates/credentials_provider" }
+custom_model = { path = "crates/custom_model" }
 dap = { path = "crates/dap" }
 dap_adapters = { path = "crates/dap_adapters" }
 db = { path = "crates/db" }
