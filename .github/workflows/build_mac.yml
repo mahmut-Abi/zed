@@ -1,3 +1,10 @@
+name: Release Nightly
+
+on: # 顶格
+  push:
+    branches: [main]
+  workflow_dispatch:
+
 jobs:
   bundle-mac:
     name: Create a macOS bundle
