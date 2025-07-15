@@ -37,6 +37,7 @@ members = [
     "crates/context_server",
     "crates/copilot",
     "crates/credentials_provider",
+    "creates/custom_model",
     "crates/dap",
     "crates/dap_adapters",
     "crates/db",
