@@ -1,0 +1,39 @@
+name: Release Nightly
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: 1
+
+jobs:
+  bundle-mac:
+    name: Create a macOS bundle
+    runs-on: macos-15
+    steps:
+      - name: Install Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "18"
+
+      - name: Checkout repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          clean: false
+
+      - name: Set release channel to nightly
+        run: |
+          set -eu
+          version=$(git rev-parse --short HEAD)
+          echo "Publishing version: ${version} on release channel nightly"
+          echo "nightly" > crates/zed/RELEASE_CHANNEL
+
+      - name: Create macOS app bundle
+        run: script/bundle-mac
+
+      - name: Upload Zed Nightly
+        run: script/upload-nightly macos

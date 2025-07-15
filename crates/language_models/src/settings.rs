@@ -9,6 +9,7 @@ use crate::provider::{
     anthropic::AnthropicSettings,
     bedrock::AmazonBedrockSettings,
     cloud::{self, ZedDotDevSettings},
+    custom::CustomSettings,
     deepseek::DeepSeekSettings,
     google::GoogleSettings,
     lmstudio::LmStudioSettings,
@@ -38,6 +39,7 @@ pub struct AllLanguageModelSettings {
     pub lmstudio: LmStudioSettings,
     pub deepseek: DeepSeekSettings,
     pub mistral: MistralSettings,
+    pub custom: CustomSettings,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize, PartialEq, JsonSchema)]
@@ -48,6 +50,7 @@ pub struct AllLanguageModelSettingsContent {
     pub lmstudio: Option<LmStudioSettingsContent>,
     pub openai: Option<OpenAiSettingsContent>,
     pub open_router: Option<OpenRouterSettingsContent>,
+    pub custom: Option<CustomSettingsContent>,
     #[serde(rename = "zed.dev")]
     pub zed_dot_dev: Option<ZedDotDevSettingsContent>,
     pub google: Option<GoogleSettingsContent>,
@@ -123,6 +126,12 @@ pub struct ZedDotDevSettingsContent {
 pub struct OpenRouterSettingsContent {
     pub api_url: Option<String>,
     pub available_models: Option<Vec<provider::open_router::AvailableModel>>,
+}
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize, PartialEq, JsonSchema)]
+pub struct CustomSettingsContent {
+    pub api_url: Option<String>,
+    pub available_models: Option<Vec<provider::custom::AvailableModel>>,
 }
 
 impl settings::Settings for AllLanguageModelSettings {
@@ -217,6 +226,17 @@ impl settings::Settings for AllLanguageModelSettings {
             merge(
                 &mut settings.openai.available_models,
                 openai.as_ref().and_then(|s| s.available_models.clone()),
+            );
+
+            // Custom
+            let custom = value.custom.clone();
+            merge(
+                &mut settings.custom.api_url,
+                custom.as_ref().and_then(|s| s.api_url.clone()),
+            );
+            merge(
+                &mut settings.custom.available_models,
+                custom.as_ref().and_then(|s| s.available_models.clone()),
             );
 
             // Vercel

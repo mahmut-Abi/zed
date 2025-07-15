@@ -2,6 +2,7 @@ pub mod anthropic;
 pub mod bedrock;
 pub mod cloud;
 pub mod copilot_chat;
+pub mod custom;
 pub mod deepseek;
 pub mod google;
 pub mod lmstudio;
