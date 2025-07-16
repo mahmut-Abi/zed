@@ -8,7 +8,7 @@ on: # 顶格
 jobs:
   bundle-mac:
     name: Create a macOS bundle
-    runs-on: macos-15
+    runs-on: macos-latest
 
     steps:
       # ---------------- checkout ----------------
