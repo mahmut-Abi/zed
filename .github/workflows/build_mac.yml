@@ -57,7 +57,9 @@ jobs:
           echo "nightly" > crates/zed/RELEASE_CHANNEL
 
       - name: Create macOS app bundle
-        run: script/bundle-mac
+        run: |
+          cargo build --release
+
 
       - name: Upload Zed Nightly
         run: script/upload-nightly macos
