@@ -40,6 +40,10 @@ pub const ANTHROPIC_PROVIDER_ID: LanguageModelProviderId =
 pub const ANTHROPIC_PROVIDER_NAME: LanguageModelProviderName =
     LanguageModelProviderName::new("Anthropic");
 
+pub const CUSTOM_PROVIDER_ID: LanguageModelProviderId = LanguageModelProviderId::new("custom");
+pub const CUSTOM_PROVIDER_NAME: LanguageModelProviderName =
+    LanguageModelProviderName::new("Custom");
+
 pub const GOOGLE_PROVIDER_ID: LanguageModelProviderId = LanguageModelProviderId::new("google");
 pub const GOOGLE_PROVIDER_NAME: LanguageModelProviderName =
     LanguageModelProviderName::new("Google AI");

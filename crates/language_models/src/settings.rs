@@ -9,7 +9,7 @@ use crate::provider::{
     anthropic::AnthropicSettings,
     bedrock::AmazonBedrockSettings,
     cloud::{self, ZedDotDevSettings},
-    custom::CustomSettings,
+    custom_model::CustomSettings,
     deepseek::DeepSeekSettings,
     google::GoogleSettings,
     lmstudio::LmStudioSettings,
@@ -131,7 +131,7 @@ pub struct OpenRouterSettingsContent {
 #[derive(Default, Clone, Debug, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct CustomSettingsContent {
     pub api_url: Option<String>,
-    pub available_models: Option<Vec<provider::custom::AvailableModel>>,
+    pub available_models: Option<Vec<provider::custom_model::AvailableModel>>,
 }
 
 impl settings::Settings for AllLanguageModelSettings {

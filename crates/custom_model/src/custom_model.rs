@@ -47,7 +47,7 @@ impl From<Role> for String {
 }
 
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, EnumIter)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, EnumIter)]
 pub enum Model {
     #[serde(rename = "custom")]
     Custom {
@@ -60,11 +60,35 @@ pub enum Model {
     },
 }
 
+impl Default for Model {
+    fn default() -> Self {
+        Model::Custom {
+            name: "custom".to_owned(),
+            display_name: None,
+            max_tokens: 4096,
+            max_output_tokens: None,
+            max_completion_tokens: None,
+        }
+    }
+}
+
 impl Model {
-    pub fn default_fast() -> Self {
-        Self::FourPointOneMini
+    pub fn default_custom() -> Self {
+        Model::Custom {
+            name: "custom".to_owned(),
+            display_name: None,
+            max_tokens: 4096,
+            max_output_tokens: None,
+            max_completion_tokens: None,
+        }
     }
 
+    pub fn default_fast() -> Self {
+        Self::default()
+    }
+    pub fn default() -> Self {
+        Self::default_fast()
+    }
     pub fn id(&self) -> &str {
         match self {
             Self::Custom { name, .. } => name,
@@ -90,7 +114,6 @@ impl Model {
             Self::Custom {
                 max_output_tokens, ..
             } => *max_output_tokens,
-            Self::Custom => Some(100_000),
         }
     }
 

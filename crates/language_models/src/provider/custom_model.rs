@@ -49,7 +49,7 @@ pub struct AvailableModel {
     pub max_completion_tokens: Option<u64>,
 }
 
-pub struct CustomLanguageModelProvider {
+pub struct CustomModelLanguageModelProvider {
     http_client: Arc<dyn HttpClient>,
     state: gpui::Entity<State>,
 }
@@ -139,7 +139,7 @@ impl State {
     }
 }
 
-impl CustomLanguageModelProvider {
+impl CustomModelLanguageModelProvider {
     pub fn new(http_client: Arc<dyn HttpClient>, cx: &mut App) -> Self {
         let state = cx.new(|cx| State {
             api_key: None,
@@ -152,7 +152,7 @@ impl CustomLanguageModelProvider {
         Self { http_client, state }
     }
 
-    fn create_language_model(&self, model: open_ai::Model) -> Arc<dyn LanguageModel> {
+    fn create_language_model(&self, model: custom_model::Model) -> Arc<dyn LanguageModel> {
         Arc::new(CustomLanguageModel {
             id: LanguageModelId::from(model.id().to_string()),
             model,
@@ -163,7 +163,7 @@ impl CustomLanguageModelProvider {
     }
 }
 
-impl LanguageModelProviderState for CustomLanguageModelProvider {
+impl LanguageModelProviderState for CustomModelLanguageModelProvider {
     type ObservableEntity = State;
 
     fn observable_entity(&self) -> Option<gpui::Entity<Self::ObservableEntity>> {
@@ -171,7 +171,7 @@ impl LanguageModelProviderState for CustomLanguageModelProvider {
     }
 }
 
-impl LanguageModelProvider for CustomLanguageModelProvider {
+impl LanguageModelProvider for CustomModelLanguageModelProvider {
     fn id(&self) -> LanguageModelProviderId {
         PROVIDER_ID
     }
@@ -185,19 +185,19 @@ impl LanguageModelProvider for CustomLanguageModelProvider {
     }
 
     fn default_model(&self, _cx: &App) -> Option<Arc<dyn LanguageModel>> {
-        Some(self.create_language_model(open_ai::Model::default()))
+        Some(self.create_language_model(custom_model::Model::default()))
     }
 
     fn default_fast_model(&self, _cx: &App) -> Option<Arc<dyn LanguageModel>> {
-        Some(self.create_language_model(open_ai::Model::default_fast()))
+        Some(self.create_language_model(custom_model::Model::default_fast()))
     }
 
     fn provided_models(&self, cx: &App) -> Vec<Arc<dyn LanguageModel>> {
         let mut models = BTreeMap::default();
 
-        // Add base models from open_ai::Model::iter()
-        for model in open_ai::Model::iter() {
-            if !matches!(model, open_ai::Model::Custom { .. }) {
+        // Add base models from custom_model::Model::iter()
+        for model in custom_model::Model::iter() {
+            if !matches!(model, custom_model::Model::Custom { .. }) {
                 models.insert(model.id().to_string(), model);
             }
         }
@@ -209,7 +209,7 @@ impl LanguageModelProvider for CustomLanguageModelProvider {
         {
             models.insert(
                 model.name.clone(),
-                open_ai::Model::Custom {
+                custom_model::Model::Custom {
                     name: model.name.clone(),
                     display_name: model.display_name.clone(),
                     max_tokens: model.max_tokens,
@@ -245,7 +245,7 @@ impl LanguageModelProvider for CustomLanguageModelProvider {
 
 pub struct CustomLanguageModel {
     id: LanguageModelId,
-    model: open_ai::Model,
+    model: custom_model::Model,
     state: gpui::Entity<State>,
     http_client: Arc<dyn HttpClient>,
     request_limiter: RateLimiter,
@@ -254,7 +254,7 @@ pub struct CustomLanguageModel {
 impl CustomLanguageModel {
     fn stream_completion(
         &self,
-        request: open_ai::Request,
+        request: custom_model::Request,
         cx: &AsyncApp,
     ) -> BoxFuture<'static, Result<futures::stream::BoxStream<'static, Result<ResponseStreamEvent>>>>
     {
@@ -331,7 +331,7 @@ impl LanguageModel for CustomLanguageModel {
         request: LanguageModelRequest,
         cx: &App,
     ) -> BoxFuture<'static, Result<u64>> {
-        count_open_ai_tokens(request, self.model.clone(), cx)
+        count_custom_model_tokens(request, self.model.clone(), cx)
     }
 
     fn stream_completion(
@@ -348,7 +348,7 @@ impl LanguageModel for CustomLanguageModel {
             LanguageModelCompletionError,
         >,
     > {
-        let request = into_open_ai(
+        let request = into_custom_model(
             request,
             self.model.id(),
             self.model.supports_parallel_tool_calls(),
@@ -363,12 +363,12 @@ impl LanguageModel for CustomLanguageModel {
     }
 }
 
-pub fn into_open_ai(
+pub fn into_custom_model(
     request: LanguageModelRequest,
     model_id: &str,
     supports_parallel_tool_calls: bool,
     max_output_tokens: Option<u64>,
-) -> open_ai::Request {
+) -> custom_model::Request {
     let stream = !model_id.starts_with("o1-");
 
     let mut messages = Vec::new();
@@ -377,7 +377,7 @@ pub fn into_open_ai(
             match content {
                 MessageContent::Text(text) | MessageContent::Thinking { text, .. } => {
                     add_message_content_part(
-                        open_ai::MessagePart::Text { text: text },
+                        custom_model::MessagePart::Text { text: text },
                         message.role,
                         &mut messages,
                     )
@@ -385,7 +385,7 @@ pub fn into_open_ai(
                 MessageContent::RedactedThinking(_) => {}
                 MessageContent::Image(image) => {
                     add_message_content_part(
-                        open_ai::MessagePart::Image {
+                        custom_model::MessagePart::Image {
                             image_url: ImageUrl {
                                 url: image.to_base64_url(),
                                 detail: None,
@@ -396,10 +396,10 @@ pub fn into_open_ai(
                     );
                 }
                 MessageContent::ToolUse(tool_use) => {
-                    let tool_call = open_ai::ToolCall {
+                    let tool_call = custom_model::ToolCall {
                         id: tool_use.id.to_string(),
-                        content: open_ai::ToolCallContent::Function {
-                            function: open_ai::FunctionContent {
+                        content: custom_model::ToolCallContent::Function {
+                            function: custom_model::FunctionContent {
                                 name: tool_use.name.to_string(),
                                 arguments: serde_json::to_string(&tool_use.input)
                                     .unwrap_or_default(),
@@ -407,12 +407,12 @@ pub fn into_open_ai(
                         },
                     };
 
-                    if let Some(open_ai::RequestMessage::Assistant { tool_calls, .. }) =
+                    if let Some(custom_model::RequestMessage::Assistant { tool_calls, .. }) =
                         messages.last_mut()
                     {
                         tool_calls.push(tool_call);
                     } else {
-                        messages.push(open_ai::RequestMessage::Assistant {
+                        messages.push(custom_model::RequestMessage::Assistant {
                             content: None,
                             tool_calls: vec![tool_call],
                         });
@@ -421,12 +421,12 @@ pub fn into_open_ai(
                 MessageContent::ToolResult(tool_result) => {
                     let content = match &tool_result.content {
                         LanguageModelToolResultContent::Text(text) => {
-                            vec![open_ai::MessagePart::Text {
+                            vec![custom_model::MessagePart::Text {
                                 text: text.to_string(),
                             }]
                         }
                         LanguageModelToolResultContent::Image(image) => {
-                            vec![open_ai::MessagePart::Image {
+                            vec![custom_model::MessagePart::Image {
                                 image_url: ImageUrl {
                                     url: image.to_base64_url(),
                                     detail: None,
@@ -435,7 +435,7 @@ pub fn into_open_ai(
                         }
                     };
 
-                    messages.push(open_ai::RequestMessage::Tool {
+                    messages.push(custom_model::RequestMessage::Tool {
                         content: content.into(),
                         tool_call_id: tool_result.tool_use_id.to_string(),
                     });
@@ -444,7 +444,7 @@ pub fn into_open_ai(
         }
     }
 
-    open_ai::Request {
+    custom_model::Request {
         model: model_id.into(),
         messages,
         stream,
@@ -460,8 +460,8 @@ pub fn into_open_ai(
         tools: request
             .tools
             .into_iter()
-            .map(|tool| open_ai::ToolDefinition::Function {
-                function: open_ai::FunctionDefinition {
+            .map(|tool| custom_model::ToolDefinition::Function {
+                function: custom_model::FunctionDefinition {
                     name: tool.name,
                     description: Some(tool.description),
                     parameters: Some(tool.input_schema),
@@ -469,41 +469,41 @@ pub fn into_open_ai(
             })
             .collect(),
         tool_choice: request.tool_choice.map(|choice| match choice {
-            LanguageModelToolChoice::Auto => open_ai::ToolChoice::Auto,
-            LanguageModelToolChoice::Any => open_ai::ToolChoice::Required,
-            LanguageModelToolChoice::None => open_ai::ToolChoice::None,
+            LanguageModelToolChoice::Auto => custom_model::ToolChoice::Auto,
+            LanguageModelToolChoice::Any => custom_model::ToolChoice::Required,
+            LanguageModelToolChoice::None => custom_model::ToolChoice::None,
         }),
     }
 }
 
 fn add_message_content_part(
-    new_part: open_ai::MessagePart,
+    new_part: custom_model::MessagePart,
     role: Role,
-    messages: &mut Vec<open_ai::RequestMessage>,
+    messages: &mut Vec<custom_model::RequestMessage>,
 ) {
     match (role, messages.last_mut()) {
-        (Role::User, Some(open_ai::RequestMessage::User { content }))
+        (Role::User, Some(custom_model::RequestMessage::User { content }))
         | (
             Role::Assistant,
-            Some(open_ai::RequestMessage::Assistant {
+            Some(custom_model::RequestMessage::Assistant {
                 content: Some(content),
                 ..
             }),
         )
-        | (Role::System, Some(open_ai::RequestMessage::System { content, .. })) => {
+        | (Role::System, Some(custom_model::RequestMessage::System { content, .. })) => {
             content.push_part(new_part);
         }
         _ => {
             messages.push(match role {
-                Role::User => open_ai::RequestMessage::User {
-                    content: open_ai::MessageContent::from(vec![new_part]),
+                Role::User => custom_model::RequestMessage::User {
+                    content: custom_model::MessageContent::from(vec![new_part]),
                 },
-                Role::Assistant => open_ai::RequestMessage::Assistant {
-                    content: Some(open_ai::MessageContent::from(vec![new_part])),
+                Role::Assistant => custom_model::RequestMessage::Assistant {
+                    content: Some(custom_model::MessageContent::from(vec![new_part])),
                     tool_calls: Vec::new(),
                 },
-                Role::System => open_ai::RequestMessage::System {
-                    content: open_ai::MessageContent::from(vec![new_part]),
+                Role::System => custom_model::RequestMessage::System {
+                    content: custom_model::MessageContent::from(vec![new_part]),
                 },
             });
         }
@@ -621,7 +621,7 @@ struct RawToolCall {
     arguments: String,
 }
 
-pub fn count_open_ai_tokens(
+pub fn count_custom_model_tokens(
     request: LanguageModelRequest,
     model: Model,
     cx: &App,
@@ -654,22 +654,6 @@ pub fn count_open_ai_tokens(
                 };
                 tiktoken_rs::num_tokens_from_messages(model, &messages)
             }
-            // Currently supported by tiktoken_rs
-            // Sometimes tiktoken-rs is behind on model support. If that is the case, make a new branch
-            // arm with an override. We enumerate all supported models here so that we can check if new
-            // models are supported yet or not.
-            Model::ThreePointFiveTurbo
-            | Model::Four
-            | Model::FourTurbo
-            | Model::FourOmni
-            | Model::FourOmniMini
-            | Model::FourPointOne
-            | Model::FourPointOneMini
-            | Model::FourPointOneNano
-            | Model::O1
-            | Model::O3
-            | Model::O3Mini
-            | Model::O4Mini => tiktoken_rs::num_tokens_from_messages(model.id(), &messages),
         }
         .map(|tokens| tokens as u64)
     })
@@ -700,7 +684,8 @@ impl ConfigurationView {
             .clone();
 
         let api_url_editor = cx.new(|cx| {
-            let input = SingleLineInput::new(window, cx, open_ai::OPEN_AI_API_URL).label("API URL");
+            let input =
+                SingleLineInput::new(window, cx, custom_model::CUSTOM_API_URL).label("API URL");
 
             if !api_url.is_empty() {
                 input.editor.update(cx, |editor, cx| {
@@ -799,7 +784,7 @@ impl ConfigurationView {
             .clone();
 
         let effective_current_url = if current_url.is_empty() {
-            open_ai::OPEN_AI_API_URL
+            custom_model::CUSTOM_API_URL
         } else {
             &current_url
         };
@@ -911,7 +896,7 @@ impl Render for ConfigurationView {
         };
 
         let custom_api_url_set =
-            AllLanguageModelSettings::get_global(cx).custom.api_url != open_ai::OPEN_AI_API_URL;
+            AllLanguageModelSettings::get_global(cx).custom.api_url != custom_model::CUSTOM_API_URL;
 
         let api_url_section = if custom_api_url_set {
             h_flex()

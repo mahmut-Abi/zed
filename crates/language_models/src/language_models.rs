@@ -51,7 +51,7 @@ fn register_language_model_providers(
         cx,
     );
     registry.register_provider(
-        CohereLanguageModelProvider::new(client.http_client(), cx),
+        CustomModelLanguageModelProvider::new(client.http_client(), cx),
         cx,
     );
     registry.register_provider(
