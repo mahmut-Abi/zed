@@ -49,7 +49,7 @@ jobs:
       # （若你需要 Rustup，可加 setup‑rust）
       - name: Install dependencies
         run: |
-          brew install jq coreutils dsymutil
+          brew install jq coreutils
 
       # ---------------- 其他自定义步骤 ------------
       - name: Set release channel to nightly
