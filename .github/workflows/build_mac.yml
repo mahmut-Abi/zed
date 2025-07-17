@@ -47,6 +47,9 @@ jobs:
           node-version: "18"
 
       # （若你需要 Rustup，可加 setup‑rust）
+      - name: Install dependencies
+        run: |
+          brew install jq coreutils dsymutil
 
       # ---------------- 其他自定义步骤 ------------
       - name: Set release channel to nightly
@@ -57,5 +60,6 @@ jobs:
           echo "nightly" > crates/zed/RELEASE_CHANNEL
 
       - name: Create macOS app bundle
-        run: cargo build --release
+        run: |
+          bash script/bundle-mac -l -d
           
