@@ -33,6 +33,5 @@ jobs:
           echo "nightly" > crates/zed/RELEASE_CHANNEL
 
       - name: Create macOS app bundle
-        run: |
-          bash script/bundle-mac -l -d
+        run:  cargo build --release --package zed --package cli --target aarch64-apple-darwin 
           
